@@ -7,14 +7,13 @@ import numpy as np
 from scipy import stats
 from scipy.stats import skew, kurtosis
 
-# Page configuration
+
 st.set_page_config(
     page_title="Global Research Impact Analysis",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -58,14 +57,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Load data function
+
 @st.cache_data
 def load_data():
     try:
-        # Read the actual data file
+
         df = pd.read_csv('publications.txt', sep='\t')
         
-        # Calculate derived metrics
+
         df['Citations_per_Doc'] = df['Times Cited'] / df['Web of Science Documents']
         df['Elite_Ratio'] = df['% Documents in Top 1%'] / df['% Documents in Top 10%']
         df['Impact_Score'] = df['Category Normalized Citation Impact'] * df['% Documents in Top 10%']
@@ -77,17 +76,14 @@ def load_data():
         st.error(f"Error loading data: {e}")
         return None
 
-# Load data
 df = load_data()
 
 if df is None:
     st.stop()
 
-# Sidebar
 st.sidebar.title("Filters & Controls")
 st.sidebar.markdown("---")
 
-# Country filter with improved UI
 countries = sorted(df['Name'].unique().tolist())
 selected_countries = st.sidebar.multiselect(
     "Select Countries (Leave empty for all)",
@@ -95,7 +91,6 @@ selected_countries = st.sidebar.multiselect(
     default=[]
 )
 
-# Year range filter
 year_range = st.sidebar.slider(
     "Year Range",
     min_value=int(df['year'].min()),
@@ -103,7 +98,6 @@ year_range = st.sidebar.slider(
     value=(int(df['year'].min()), int(df['year'].max()))
 )
 
-# Citation threshold filter
 citation_threshold = st.sidebar.number_input(
     "Minimum Citations Threshold",
     min_value=0,
@@ -112,7 +106,6 @@ citation_threshold = st.sidebar.number_input(
     step=10000
 )
 
-# Metric selection
 metric_options = {
     'Times Cited': 'Times Cited',
     'Web of Science Documents': 'Documents',
@@ -127,7 +120,6 @@ selected_metric = st.sidebar.selectbox(
     format_func=lambda x: metric_options[x]
 )
 
-# Advanced filters
 st.sidebar.markdown("### Advanced Filters")
 show_outliers = st.sidebar.checkbox("Show Outliers", value=True)
 cnci_range = st.sidebar.slider(
@@ -139,7 +131,6 @@ cnci_range = st.sidebar.slider(
     step=0.1
 )
 
-# Filter data
 filtered_df = df.copy()
 
 if selected_countries:
@@ -153,12 +144,10 @@ filtered_df = filtered_df[
     (filtered_df['Category Normalized Citation Impact'] <= cnci_range[1])
 ]
 
-# Main header
 st.markdown('<p class="main-header">Global Research Impact Analysis Dashboard</p>', unsafe_allow_html=True)
 st.markdown("### Comprehensive Exploratory Data Analysis of Scientific Publications (2003-2025)")
 st.markdown("---")
 
-# Executive Summary with Key Insights
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
@@ -190,7 +179,6 @@ with col6:
 
 st.markdown("---")
 
-# Tab layout with additional advanced analysis tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Data Overview", 
     "Geographic Analysis", 
@@ -201,18 +189,15 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Statistical Summary"
 ])
 
-# TAB 1: DATA OVERVIEW
 with tab1:
     st.header("Dataset Overview & Data Quality")
     
-    # Data Quality Assessment
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown('<div class="insight-box">', unsafe_allow_html=True)
         st.markdown("### Data Quality Report")
         
-        # Missing values
         missing_pct = (filtered_df.isnull().sum() / len(filtered_df) * 100)
         if missing_pct.sum() == 0:
             st.success("No missing values detected")
@@ -220,11 +205,9 @@ with tab1:
             st.warning(f"Missing values found in {missing_pct[missing_pct > 0].count()} columns")
             st.dataframe(missing_pct[missing_pct > 0])
         
-        # Duplicates
         duplicates = filtered_df.duplicated().sum()
         st.info(f"Duplicate rows: {duplicates} ({duplicates/len(filtered_df)*100:.2f}%)")
         
-        # Data types
         st.info(f"Numeric columns: {filtered_df.select_dtypes(include=[np.number]).columns.tolist().__len__()}")
         st.info(f"Categorical columns: {filtered_df.select_dtypes(exclude=[np.number]).columns.tolist().__len__()}")
         
@@ -234,33 +217,27 @@ with tab1:
         st.markdown('<div class="success-box">', unsafe_allow_html=True)
         st.markdown("### Key Findings")
         
-        # Top performer
         top_country = filtered_df.groupby('Name')[selected_metric].sum().idxmax()
         top_value = filtered_df.groupby('Name')[selected_metric].sum().max()
         st.success(f"Top Performer: **{top_country}** ({metric_options[selected_metric]}: {top_value:,.0f})")
         
-        # Most productive year
         top_year = filtered_df.groupby('year')['Web of Science Documents'].sum().idxmax()
         st.success(f"Most Productive Year: **{top_year}**")
         
-        # Highest CNCI
         max_cnci_country = filtered_df.groupby('Name')['Category Normalized Citation Impact'].mean().idxmax()
         max_cnci = filtered_df.groupby('Name')['Category Normalized Citation Impact'].mean().max()
         st.success(f"Highest Avg CNCI: **{max_cnci_country}** ({max_cnci:.3f})")
         
-        # Citation efficiency
         top_efficiency = filtered_df.groupby('Name')['Citations_per_Doc'].mean().idxmax()
         st.success(f"Most Efficient: **{top_efficiency}** (citations/doc)")
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Distribution Analysis
     st.subheader("Distribution Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Top countries by selected metric
         country_agg = filtered_df.groupby('Name').agg({
             selected_metric: 'sum',
             'Web of Science Documents': 'sum',
@@ -281,7 +258,6 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Distribution of CNCI with statistical annotations
         fig = px.histogram(
             filtered_df,
             x='Category Normalized Citation Impact',
@@ -302,8 +278,7 @@ with tab1:
                       annotation_text=f"Median: {median_cnci:.2f}")
         fig.update_layout(height=450)
         st.plotly_chart(fig, use_container_width=True)
-    
-    # Correlation Analysis
+   
     st.subheader("Quick Correlation Insights")
     
     numeric_cols = ['Web of Science Documents', 'Times Cited', 'Collab-CNCI',
@@ -323,13 +298,11 @@ with tab1:
     fig.update_layout(height=600)
     st.plotly_chart(fig, use_container_width=True)
     
-    # Data table with enhanced display
     st.subheader("Detailed Data View")
     display_cols = ['Name', 'year', 'Web of Science Documents', 'Times Cited', 
                     'Category Normalized Citation Impact', '% Documents in Top 10%',
                     'Citations_per_Doc', 'Impact_Score']
     
-    # Add color coding
     styled_df = filtered_df[display_cols].sort_values('Impact_Score', ascending=False).head(100)
     st.dataframe(
         styled_df.style.background_gradient(subset=['Impact_Score'], cmap='YlGn')
@@ -338,11 +311,9 @@ with tab1:
         height=400
     )
 
-# TAB 2: GEOGRAPHIC ANALYSIS
 with tab2:
     st.header("Geographic Distribution & Performance")
-    
-    # Country performance heatmap
+   
     country_year_pivot = filtered_df.pivot_table(
         values='Category Normalized Citation Impact',
         index='Name',
@@ -363,7 +334,6 @@ with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
-        # Citations per document by country with bubble size
         country_efficiency = filtered_df.groupby('Name').agg({
             'Citations_per_Doc': 'mean',
             'Web of Science Documents': 'sum',
@@ -385,7 +355,6 @@ with tab2:
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Elite output comparison with trend
         elite_data = filtered_df.groupby('Name')[
             ['% Documents in Top 1%', '% Documents in Top 10%']
         ].mean().reset_index().sort_values('% Documents in Top 1%', ascending=False).head(15)
@@ -415,20 +384,17 @@ with tab2:
         )
         st.plotly_chart(fig, use_container_width=True)
     
-    # Geographic insights
     st.subheader("Regional Performance Insights")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        # Country with most consistent performance (lowest std in CNCI)
         country_consistency = filtered_df.groupby('Name')['Category Normalized Citation Impact'].agg(['mean', 'std'])
         most_consistent = country_consistency.nsmallest(1, 'std').index[0]
         st.metric("Most Consistent", most_consistent, 
                  f"σ={country_consistency.loc[most_consistent, 'std']:.3f}")
     
     with col2:
-        # Most improved country
         year_performance = filtered_df.groupby(['Name', 'year'])['Category Normalized Citation Impact'].mean().reset_index()
         country_trends = year_performance.groupby('Name').apply(
             lambda x: (x['Category Normalized Citation Impact'].iloc[-1] - x['Category Normalized Citation Impact'].iloc[0]) 
@@ -439,16 +405,13 @@ with tab2:
         st.metric("Most Improved", most_improved, f"+{improvement:.3f}")
     
     with col3:
-        # Highest collaboration impact
         top_collab = filtered_df.groupby('Name')['Collab-CNCI'].mean().idxmax()
         collab_score = filtered_df.groupby('Name')['Collab-CNCI'].mean().max()
         st.metric("Best Collaboration", top_collab, f"{collab_score:.3f}")
 
-# TAB 3: TEMPORAL TRENDS
 with tab3:
     st.header("Temporal Analysis & Trends")
     
-    # Time series aggregation
     time_series = filtered_df.groupby('year').agg({
         'Web of Science Documents': 'sum',
         'Times Cited': 'sum',
@@ -457,7 +420,6 @@ with tab3:
         'Citations_per_Doc': 'mean'
     }).reset_index()
     
-    # Multi-axis time series with enhanced visuals
     fig = make_subplots(
         rows=3, cols=1,
         subplot_titles=("Publication & Citation Volume Over Time", 
@@ -469,7 +431,6 @@ with tab3:
                [{"secondary_y": False}]]
     )
     
-    # Row 1: Volume metrics
     fig.add_trace(
         go.Scatter(x=time_series['year'], y=time_series['Web of Science Documents'],
                    name='Documents', line=dict(color='#3b82f6', width=3),
@@ -483,8 +444,7 @@ with tab3:
                    fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.2)'),
         row=1, col=1, secondary_y=True
     )
-    
-    # Row 2: Quality metrics
+   
     fig.add_trace(
         go.Scatter(x=time_series['year'], y=time_series['Category Normalized Citation Impact'],
                    name='CNCI', line=dict(color='#8b5cf6', width=3),
@@ -498,8 +458,7 @@ with tab3:
                    mode='lines+markers'),
         row=2, col=1, secondary_y=True
     )
-    
-    # Row 3: Efficiency
+ 
     fig.add_trace(
         go.Scatter(x=time_series['year'], y=time_series['Citations_per_Doc'],
                    name='Citations/Doc', line=dict(color='#ec4899', width=3),
@@ -510,8 +469,7 @@ with tab3:
     fig.update_layout(height=1000, showlegend=True, hovermode='x unified')
     fig.update_xaxes(title_text="Year", row=3, col=1)
     st.plotly_chart(fig, use_container_width=True)
-    
-    # Year-over-year growth analysis
+  
     st.subheader("Year-over-Year Growth Analysis")
     
     col1, col2 = st.columns(2)
@@ -543,13 +501,11 @@ with tab3:
         )
         fig.add_hline(y=0, line_dash="dash", line_color="black")
         st.plotly_chart(fig, use_container_width=True)
-    
-    # Trend forecasting visualization
+   
     st.subheader("Trend Patterns")
     
     from scipy import stats as sp_stats
-    
-    # Linear regression for documents
+   
     slope_docs, intercept_docs, r_docs, p_docs, se_docs = sp_stats.linregress(
         time_series['year'], time_series['Web of Science Documents']
     )
@@ -575,14 +531,12 @@ with tab3:
                  f"R²={r_docs**2:.3f}",
                  "Strong" if r_docs**2 > 0.7 else "Moderate" if r_docs**2 > 0.4 else "Weak")
 
-# TAB 4: QUALITY METRICS
 with tab4:
     st.header("Research Quality Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Quality vs Quantity scatter with enhanced annotations
         country_summary = filtered_df.groupby('Name').agg({
             'Web of Science Documents': 'sum',
             'Category Normalized Citation Impact': 'mean',
@@ -608,7 +562,6 @@ with tab4:
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Collaboration impact with regression line
         sample_data = filtered_df.sample(min(500, len(filtered_df)))
         fig = px.scatter(
             sample_data,
@@ -623,7 +576,6 @@ with tab4:
         fig.update_layout(height=500, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
     
-    # Box plots for distribution comparison
     st.subheader("Distribution Comparison Across Countries")
     
     top_countries = filtered_df['Name'].value_counts().head(10).index
@@ -656,11 +608,9 @@ with tab4:
         fig.update_layout(showlegend=False, height=450, xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
 
-# TAB 5: ADVANCED ANALYTICS
 with tab5:
     st.header("Advanced Analytics & Insights")
     
-    # Statistical distribution analysis
     st.subheader("Statistical Distribution Analysis")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -695,7 +645,6 @@ with tab5:
         st.write(impact_stats)
         st.info(f"Skewness: {impact_skew:.3f}")
     
-    # Impact score ranking with composite metrics
     st.subheader("Overall Impact Score Ranking")
     
     impact_ranking = filtered_df.groupby('Name').agg({
@@ -707,18 +656,15 @@ with tab5:
         'H_Index_Proxy': 'mean'
     }).reset_index()
     
-    # Normalize and create composite score
     from sklearn.preprocessing import MinMaxScaler
     scaler = MinMaxScaler()
 
-# Normalize metrics for composite score
     score_cols = ['Impact_Score', 'Category Normalized Citation Impact', 
                   '% Documents in Top 10%', 'Citations_per_Doc', 'H_Index_Proxy']
     
     impact_ranking_scaled = impact_ranking.copy()
     impact_ranking_scaled[score_cols] = scaler.fit_transform(impact_ranking[score_cols])
     
-    # Calculate composite score (weighted average)
     impact_ranking_scaled['Composite_Score'] = (
         impact_ranking_scaled['Impact_Score'] * 0.3 +
         impact_ranking_scaled['Category Normalized Citation Impact'] * 0.25 +
@@ -742,8 +688,7 @@ with tab5:
     )
     fig.update_layout(xaxis_tickangle=-45, height=500)
     st.plotly_chart(fig, use_container_width=True)
-    
-    # Detailed breakdown table
+   
     st.subheader("Detailed Impact Score Breakdown")
     display_impact_cols = ['Name', 'Composite_Score', 'Impact_Score', 
                           'Category Normalized Citation Impact', '% Documents in Top 10%',
@@ -765,13 +710,11 @@ with tab5:
         height=400
     )
     
-    # Percentile Analysis
     st.subheader("Percentile Distribution Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # CNCI percentiles
         percentiles = [10, 25, 50, 75, 90, 95, 99]
         cnci_percentiles = np.percentile(filtered_df['Category Normalized Citation Impact'], percentiles)
         
@@ -795,7 +738,6 @@ with tab5:
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Citations per doc percentiles
         cpd_percentiles = np.percentile(filtered_df['Citations_per_Doc'], percentiles)
         
         percentile_df_cpd = pd.DataFrame({
@@ -815,7 +757,6 @@ with tab5:
         fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
-# TAB 6: OUTLIER DETECTION
 with tab6:
     st.header("Outlier Detection & Anomaly Analysis")
     
@@ -825,8 +766,6 @@ with tab6:
     - **Z-Score Method**: Values with |z-score| > 3
     - **Isolation Forest**: Machine learning-based anomaly detection
     """)
-    
-    # IQR Method for outlier detection
     st.subheader("IQR-Based Outlier Detection")
     
     outlier_metrics = ['Category Normalized Citation Impact', 'Citations_per_Doc', 
@@ -848,7 +787,7 @@ with tab6:
         outlier_counts[metric] = len(outliers)
         outlier_data[metric] = outliers
     
-    # Display outlier counts
+   
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -866,12 +805,10 @@ with tab6:
     with col4:
         st.metric("Citations Outliers", outlier_counts['Times Cited'],
                  f"{outlier_counts['Times Cited']/len(filtered_df)*100:.1f}%")
-    
-    # Visualize outliers
+   
     col1, col2 = st.columns(2)
     
     with col1:
-        # Box plot with outliers
         fig = px.box(
             filtered_df,
             y='Category Normalized Citation Impact',
@@ -885,10 +822,9 @@ with tab6:
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Scatter plot showing outliers
         sample_for_plot = filtered_df.sample(min(1000, len(filtered_df)))
         
-        # Mark outliers
+      
         sample_for_plot['Is_Outlier'] = sample_for_plot.apply(
             lambda row: any([
                 row['Category Normalized Citation Impact'] in outlier_data['Category Normalized Citation Impact']['Category Normalized Citation Impact'].values
@@ -908,8 +844,7 @@ with tab6:
         )
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
-    
-    # Z-Score Analysis
+   
     st.subheader("Z-Score Based Anomaly Detection")
     
     from scipy.stats import zscore
@@ -921,7 +856,6 @@ with tab6:
     st.write(f"**Found {len(extreme_outlier_df)} extreme outliers** (|z-score| > 3)")
     
     if len(extreme_outlier_df) > 0:
-        # Show top extreme outliers
         display_cols = ['Name', 'year', 'Category Normalized Citation Impact', 
                        'Citations_per_Doc', 'Times Cited', '% Documents in Top 10%']
         
@@ -933,7 +867,6 @@ with tab6:
             height=300
         )
         
-        # Analyze outlier characteristics
         st.markdown("### Outlier Characteristics")
         
         col1, col2 = st.columns(2)
@@ -962,11 +895,9 @@ with tab6:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-# TAB 7: STATISTICAL SUMMARY
 with tab7:
     st.header("Comprehensive Statistical Summary")
-    
-    # Overall statistics
+ 
     st.subheader("Descriptive Statistics")
     
     key_metrics = ['Web of Science Documents', 'Times Cited', 
@@ -983,7 +914,6 @@ with tab7:
         use_container_width=True
     )
     
-    # Country-level aggregated statistics
     st.subheader("Country-Level Statistics")
     
     country_stats = filtered_df.groupby('Name').agg({
@@ -998,8 +928,7 @@ with tab7:
     country_stats = country_stats.sort_values('Times Cited_sum', ascending=False).head(20)
     
     st.dataframe(country_stats, use_container_width=True, height=400)
-    
-    # Hypothesis Testing
+  
     st.subheader("Statistical Hypothesis Testing")
     
     st.markdown("""
@@ -1067,7 +996,7 @@ with tab7:
         use_container_width=True
     )
     
-    # Time series analysis - trend detection
+    
     st.subheader("Trend Analysis Over Time")
     
     yearly_cnci = filtered_df.groupby('year')['Category Normalized Citation Impact'].mean()
@@ -1091,7 +1020,6 @@ with tab7:
                  "Significant" if p_value < 0.05 else "Not Significant",
                  f"p={p_value:.4f}")
     
-    # Plot trend
     fig = px.scatter(
         x=yearly_cnci.index,
         y=yearly_cnci.values,
@@ -1102,7 +1030,6 @@ with tab7:
     fig.update_traces(marker=dict(size=10, color='#3b82f6'))
     st.plotly_chart(fig, use_container_width=True)
     
-    # Key Insights Summary
     st.subheader("Key Statistical Insights")
     
     col1, col2 = st.columns(2)
@@ -1124,7 +1051,6 @@ with tab7:
         st.write(f"- Top 10% threshold: {filtered_df['Category Normalized Citation Impact'].quantile(0.90):.3f}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Footer
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem;'>
